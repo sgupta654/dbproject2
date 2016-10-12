@@ -255,22 +255,27 @@ public class MyFakebookOracle extends FakebookOracle {
         try (Statement stmt =
                      oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
                              ResultSet.CONCUR_READ_ONLY)) {
+            stmt.executeUpdate("create view no_friends (user_id) AS select user_id from " +
+                userTableName +
+                " where not exists (select user1_id, user2_id from " +
+                    friendsTableName +
+                    " where user_id = user1_id OR user_id = user2_id)");
 
-                    // For each user, count up the instances of each first name
-                    // and group count by first name in descending order
-                    ResultSet rst = stmt.executeQuery("select user_id from " +
-                        userTableName +
-                        " where not exists (select user1_id, user2_id from " +
-                            friendsTableName +
-                            " where user_id = user1_id OR user_id = user2_id)");
+            ResultSet rst = stmt.executeQuery("select u.user_id, u.first_name, u.last_name from " +
+                userTableName +
+                " u inner join no_friends nf on u.user_id = nf.user_id");
 
-/*
-                    while(rst.next()) {
-                        int user_id = rst.getInt(1);
-                        // Inputting into lonelyUsers, 10L, 11L?
-                        System.out.print(user_id + "\n");
-                    }
-*/
+
+            while(rst.next()) {
+                long user_id = rst.getLong(1);
+                String first_name = rst.getNString(2);
+                String last_name = rst.getNString(3);
+                this.lonelyUsers.add(new UserInfo(user_id, first_name, last_name));
+                //System.out.print(user_id + " " + first_name + " " + last_name+ "\n");
+            }
+
+            stmt.executeUpdate("drop view no_friends");
+
         } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
@@ -289,21 +294,26 @@ public class MyFakebookOracle extends FakebookOracle {
                  oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
                          ResultSet.CONCUR_READ_ONLY)) {
 
-                // For each user, count up the instances of each first name
-                // and group count by first name in descending order
-                ResultSet rst = stmt.executeQuery("select U.user_id from " +
-                    userTableName + " U, " + currentCityTableName + " CC, " + hometownCityTableName + " HC " +
-                    " where U.user_id = CC.user_id AND U.user_id = HC.user_id AND CC.current_city_id != HC.hometown_city_id");
+            stmt.executeUpdate("create view away_from_home (user_id) as select u.user_id from " +
+                    userTableName +
+                    " u, " +
+                    currentCityTableName +
+                    " cc, " +
+                    hometownCityTableName +
+                    " hc where u.user_id=cc.user_id AND u.user_id=hc.user_id AND cc.current_city_id != hc.hometown_city_id group by u.user_id order by u.user_id asc");
 
-/*
-                int num_rows = 0;
+            ResultSet rst = stmt.executeQuery("select u.user_id, u.first_name, u.last_name from " +
+                userTableName +
+                " u inner join away_from_home afh on u.user_id = afh.user_id order by u.user_id");
+
                 while(rst.next()) {
-                    num_rows++;
-                    int user_id = rst.getInt(1);
-                    // Inputting into lonelyUsers, 10L, 11L?
-                    System.out.print(user_id + "\n");
+                    long user_id = rst.getLong(1);
+                    String first_name = rst.getNString(2);
+                    String last_name = rst.getNString(3);
+                    this.liveAwayFromHome.add(new UserInfo(user_id, first_name, last_name));
                 }
-*/
+
+            stmt.executeUpdate("drop view away_from_home");
 
         } catch (SQLException err) {
             System.err.println(err.getMessage());
@@ -333,9 +343,29 @@ public class MyFakebookOracle extends FakebookOracle {
                  oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
                          ResultSet.CONCUR_READ_ONLY)) {
 
-                stmt.executeUpdate("CREATE VIEW photo_num_subjects (num_subjects, photo_id) as (select count(*) as numsubjects, tag_photo_id from " + 
+                stmt.executeUpdate("create view photo_num_subjects (num_subjects, photo_id) as select count(*) as numsubjects, tag_photo_id from " + 
                     tagTableName + 
-                        " where tag_photo_id is not null group by tag_photo_id order by numsubjects desc)");
+                        " where tag_photo_id is not null group by tag_photo_id order by numsubjects desc, order by photo_id asc");
+
+                stmt.executeUpdate("create view subject_count (num_photos, num_sub) as select count(*) as num_photos_get, num_subjects from photo_num_subjects group by num_subjects order by num_subjects desc");
+
+                ResultSet rst = stmt.executeQuery("select * from photo_num_subjects");
+
+                while(rst.next()) {
+                    int num_photos = rst.getInt(1);
+                    int num_subjects = rst.getInt(2);
+                    if(num_photos <= n && n != 0) {
+                        ResultSet rst_two = stmt.executeQuery("select photo_id from (select * from photo_num_subjects order by photo_id asc) where num_subjects = " + num_subjects);
+                        
+                        while(rst_two.next()) {
+                            int photo_id = rst_two.getInt(1);
+                            ResultSet rst_three = stmt.executeQuery(
+                                "select p.photo_id, p.album_id, ")
+                        }
+
+                    }
+                }
+
 
 
 
@@ -347,19 +377,20 @@ public class MyFakebookOracle extends FakebookOracle {
 */
 
                 stmt.executeUpdate("DROP VIEW photo_num_subjects");
+                stmt.executeUpdate("DROP VIEW subject_count");
 
-//CREATE VIEW photo_num_subjects (num_subjects, photo_id) AS SELECT COUNT(*) AS numsubjects, tag_photo_id FROM tajik.PUBLIC_TAGS WHERE tag_photo_id IS NOT NULL GROUP BY tag_photo_id;                
-//CREATE VIEW most_tagged_photos (num_subjects, photo_id) AS SELECT * FROM photo_num_subjects WHERE num_subjects = (SELECT max(num_subjects) FROM photo_num_subjects) ORDER BY num_subjects asc;
-/*
-                int num_rows = 0;
-                while(rst.next()) {
-                    num_rows++;
-                    int user_id = rst.getInt(1);
-                    String photo_id = rst.getNString(2);
-                    // Inputting into lonelyUsers, 10L, 11L?
-                    System.out.print(user_id + " " + photo_id + "\n");
-                }
-*/
+
+
+//CREATE VIEW photo_num_subjects (num_subjects, photo_id) AS SELECT COUNT(*) AS numsubjects, tag_photo_id FROM tajik.PUBLIC_TAGS WHERE tag_photo_id IS NOT NULL GROUP BY tag_photo_id order by numsubjects desc; 
+// When you include an aggregate function (like avg, sum) in your query, you must group by all columns you aren't aggregating.               
+//CREATE VIEW subject_count (num_photos, num_sub) AS SELECT COUNT(*) as num_photos_get, num_subjects FROM photo_num_subjects group by num_subjects ORDER by num_subjects DESC; 
+
+//CREATE VIEW most_tagged_photos (num_subjects, photo_id) AS SELECT * FROM photo_num_subjects WHERE num_subjects = (SELECT max(num_subjects) FROM photo_num_subjects) ORDER BY photo_id asc;
+
+//SELECT num_photos from subject_count;
+//
+
+
 
         } catch (SQLException err) {
             System.err.println(err.getMessage());
@@ -407,6 +438,18 @@ public class MyFakebookOracle extends FakebookOracle {
         mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
                 sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
         this.bestMatches.add(mp);
+
+
+/*
+        Age - between a range
+            if year is close to range outer bound, check month, if month same, check day
+        gender !=  gender
+        where not in the friendship table, have to check for opposite
+        get all photos where user1 is tagged, get all photos where user2 tagged
+
+*/
+
+
     }
 
     // **** Query 6 ****
@@ -436,6 +479,10 @@ public class MyFakebookOracle extends FakebookOracle {
         p.addSharedFriend(678L, "sharedFriend2FirstName", "sharedFriend2LastName");
         p.addSharedFriend(789L, "sharedFriend3FirstName", "sharedFriend3LastName");
         this.suggestedUsersPairs.add(p);
+
+
+
+        //u1 friends with u2, u2 friends with u3, u1 not friends with u3, u1 != u2, u2 != u3, u1 != u3
     }
 
     @Override
