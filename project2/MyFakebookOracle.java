@@ -167,6 +167,7 @@ public class MyFakebookOracle extends FakebookOracle {
                     this.mostCommonFirstNames.add(first_name);
                 }
             }
+            rst.close();
 
             // For each user, get the length of the first name and the first name
             // group by first name and order in desc order by length of first name
@@ -188,6 +189,7 @@ public class MyFakebookOracle extends FakebookOracle {
                 }
                 //num_rows_in_rst += 1;
             }
+            rst.close();
 
             // For each user, get the length of the first name and the first name
             // group by first name and order in asc order by length of first name
@@ -276,6 +278,9 @@ public class MyFakebookOracle extends FakebookOracle {
 
             stmt.executeUpdate("drop view no_friends");
 
+            rst.close();
+            stmt.close();
+
         } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
@@ -314,6 +319,8 @@ public class MyFakebookOracle extends FakebookOracle {
                 }
 
             stmt.executeUpdate("drop view away_from_home");
+            rst.close();
+            stmt.close();
 
         } catch (SQLException err) {
             System.err.println(err.getMessage());
@@ -327,6 +334,7 @@ public class MyFakebookOracle extends FakebookOracle {
     // If there are ties, choose the photo with the smaller numeric PhotoID first
     //
     public void findPhotosWithMostTags(int n) {
+/*
         String photoId = "1234567";
         String albumId = "123456789";
         String albumName = "album1";
@@ -337,6 +345,7 @@ public class MyFakebookOracle extends FakebookOracle {
         tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName1", "taggedUserLastName1"));
         tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName2", "taggedUserLastName2"));
         this.photosWithMostTags.add(tp);
+*/
 
 
         try (Statement stmt =
@@ -345,25 +354,52 @@ public class MyFakebookOracle extends FakebookOracle {
 
                 stmt.executeUpdate("create view photo_num_subjects (num_subjects, photo_id) as select count(*) as numsubjects, tag_photo_id from " + 
                     tagTableName + 
-                        " where tag_photo_id is not null group by tag_photo_id order by numsubjects desc, order by photo_id asc");
+                        " where tag_photo_id is not null group by tag_photo_id order by numsubjects desc, tag_photo_id asc");
 
-                stmt.executeUpdate("create view subject_count (num_photos, num_sub) as select count(*) as num_photos_get, num_subjects from photo_num_subjects group by num_subjects order by num_subjects desc");
+                stmt.executeUpdate("create view photos_with_most_subjects (photo_id) as select photo_id from photo_num_subjects where rownum <= " + n);
+                // stmt.executeUpdate("create view subject_count (num_photos, num_sub) as select count(*) as num_photos_get, num_subjects from photo_num_subjects group by num_subjects order by num_subjects desc");
 
-                ResultSet rst = stmt.executeQuery("select * from photo_num_subjects");
+                ResultSet rst = stmt.executeQuery("select ms.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from photos_with_most_subjects ms, " + 
+                    photoTableName + 
+                    " p, " +
+                    albumTableName +
+                    " a where ms.photo_id = p.photo_id and p.album_id = a.album_id order by ms.photo_id asc");
 
                 while(rst.next()) {
-                    int num_photos = rst.getInt(1);
-                    int num_subjects = rst.getInt(2);
-                    if(num_photos <= n && n != 0) {
-                        ResultSet rst_two = stmt.executeQuery("select photo_id from (select * from photo_num_subjects order by photo_id asc) where num_subjects = " + num_subjects);
-                        
+                    String photo_id = rst.getNString(1);
+                    String album_id = rst.getNString(2);
+                    String album_name = rst.getNString(3);
+                    String photo_caption = rst.getNString(4);
+                    String photo_link = rst.getNString(5);
+
+                    PhotoInfo p = new PhotoInfo(photo_id, album_id, album_name, photo_caption, photo_link);
+                    TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
+
+                    try (Statement stmt_two = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                         ResultSet.CONCUR_READ_ONLY)) {
+
+                        ResultSet rst_two = stmt_two.executeQuery("select u.user_id, u.first_name, u.last_name from photos_with_most_subjects ms, " +
+                            userTableName + 
+                            " u, " + 
+                            tagTableName + 
+                            " t where ms.photo_id = " + 
+                            photo_id + 
+                            " and ms.photo_id = t.tag_photo_id and t.tag_subject_id = u.user_id order by u.user_id asc");
+
                         while(rst_two.next()) {
-                            int photo_id = rst_two.getInt(1);
-                            ResultSet rst_three = stmt.executeQuery(
-                                "select p.photo_id, p.album_id, ")
+                            long user_id = rst_two.getLong(1);
+                            String first_name = rst_two.getNString(2);
+                            String last_name = rst_two.getNString(3);
+                            tp.addTaggedUser(new UserInfo(user_id, first_name, last_name));
                         }
 
+                        rst_two.close();
+                        stmt_two.close();
+                    } catch (SQLException err) {
+                        System.err.println(err.getMessage());
                     }
+                    
+                    this.photosWithMostTags.add(tp);
                 }
 
 
@@ -376,12 +412,13 @@ public class MyFakebookOracle extends FakebookOracle {
                     " where U.user_id = CC.user_id AND U.user_id = HC.user_id AND CC.current_city_id != HC.hometown_city_id");
 */
 
-                stmt.executeUpdate("DROP VIEW photo_num_subjects");
-                stmt.executeUpdate("DROP VIEW subject_count");
+                stmt.executeUpdate("drop view photo_num_subjects");
+                stmt.executeUpdate("drop view photos_with_most_subjects");
 
+                rst.close();
+                stmt.close();
 
-
-//CREATE VIEW photo_num_subjects (num_subjects, photo_id) AS SELECT COUNT(*) AS numsubjects, tag_photo_id FROM tajik.PUBLIC_TAGS WHERE tag_photo_id IS NOT NULL GROUP BY tag_photo_id order by numsubjects desc; 
+//CREATE VIEW photo_num_subjects (num_subjects, photo_id) AS SELECT COUNT(*) AS numsubjects, tag_photo_id FROM tajik.PUBLIC_TAGS WHERE tag_photo_id IS NOT NULL GROUP BY tag_photo_id order by numsubjects desc, tag_photo_id asc;  
 // When you include an aggregate function (like avg, sum) in your query, you must group by all columns you aren't aggregating.               
 //CREATE VIEW subject_count (num_photos, num_sub) AS SELECT COUNT(*) as num_photos_get, num_subjects FROM photo_num_subjects group by num_subjects ORDER by num_subjects DESC; 
 
