@@ -466,41 +466,6 @@ public class MyFakebookOracle extends FakebookOracle {
 
         //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
 
-
-            stmt.executeUpdate("create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) as select u1.user_id, u1.gender, u1.first_name, u1.last_name, u1.year_of_birth, u2.user_id, u2.gender, u2.first_name, u2.last_name, u2.year_of_birth, p.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from " +
-            userTableName +
-            " u1, " +
-            userTableName +
-            " u2, " +
-            photoTableName +
-            " p, " +
-            tagTableName +
-            " t1, " +
-            tagTableName +
-            " t2, " +
-            albumTableName +
-            " a, " +
-            "where (u1.user_id != u2.user_id and u1.gender != u2.gender and u1.gender = 'female' and abs(u1.year_of_birth - u2.year_of_birth) <= "+ yearDiff +" and u1.user_id = t1.tag_subject_id and t1.tag_photo_id = t2.tag_photo_id and t2.tag_subject_id = u2.user_id and u2.user_id not in (select f.user2_id from " +
-            friendsTableName +
-            " f where u1.user_id = f.user1_id) and u1.user_id not in (select f.user2_id from " +
-            friendsTableName +
-            " f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id");
-
-
-            create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) as select u1.user_id, u1.gender, u1.first_name, u1.last_name, u1.year_of_birth, u2.user_id, u2.gender, u2.first_name, u2.last_name, u2.year_of_birth, p.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from 
-            tajik.public_users u1, 
-            tajik.public_users u2, 
-            tajik.public_photos p, 
-            tajik.public_tags t1, 
-            tajik.public_tags t2, 
-            tajik.public_albums a, 
-            where (u1.user_id != u2.user_id and u1.gender != u2.gender and u1.gender = 'female' 
-                and abs(u1.year_of_birth - u2.year_of_birth) <= 100 
-                and u1.user_id = t1.tag_subject_id and t1.tag_photo_id = t2.tag_photo_id and t2.tag_subject_id = u2.user_id 
-                and u2.user_id not in (select f.user2_id from
-            tajik.public_friends f where u1.user_id = f.user1_id) and u1.user_id not in (select f.user2_id from 
-            tajik.public_friends f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id;
-
  
 
 
