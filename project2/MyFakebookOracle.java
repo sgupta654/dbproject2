@@ -467,24 +467,36 @@ public class MyFakebookOracle extends FakebookOracle {
         //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
 
 
-            stmt.executeUpdate("create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) as select u1.user_id, u1.gender, u1.first_name, u1.last_name, u1.year_of_birth, u2.user_id, u2.gender, u2.first_name, u2.last_name, u2.year_of_birth, p.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from " +
+            stmt.executeUpdate("CREATE VIEW pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l)
+                                AS SELECT U1.user_id, U1.gender, U1.first_name, U1.last_name, U1.year_of_birth,
+                                U2.user_id, U2.gender, U2.first_name, U2.last_name, U2.year_of_birth,
+                                P.photo_id, P.album_id, A.album_name, P.photo_caption, P.photo_link " +
             userTableName +
-            " u1, " +
+            " U1, " +
             userTableName +
-            " u2, " +
+            " U2, " +
             photoTableName +
-            " p, " +
+            " P, " +
             tagTableName +
-            " t1, " +
+            " T1, " +
             tagTableName +
-            " t2, " +
+            " T2, " +
             albumTableName +
-            " a, " +
-            "where (u1.user_id != u2.user_id and u1.gender != u2.gender and u1.gender = 'female' and abs(u1.year_of_birth - u2.year_of_birth) <= "+ yearDiff +" and u1.user_id = t1.tag_subject_id and t1.tag_photo_id = t2.tag_photo_id and t2.tag_subject_id = u2.user_id and u2.user_id not in (select f.user2_id from " +
+            " A, " +
+            "WHERE (U1.user_id != U2.user_id
+                AND (U1.gender != U2.gender AND U1.gender = 'female')
+                AND ABS(U1.year_of_birth - U2.year_of_birth) <= "+ yearDiff +
+                " AND U1.user_id = T1.tag_subject_id AND T1.tag_photo_id = T2.tag_photo_id AND T2.tag_subject_id = U2.user_id
+                    AND U2.user_id NOT IN
+                        (SELECT F.user2_id FROM " +
             friendsTableName +
-            " f where u1.user_id = f.user1_id) and u1.user_id not in (select f.user2_id from " +
-            friendsTableName +
-            " f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id");
+            " F WHERE U1.user_id = F.user1_id
+            ) AND U1.user_id NOT IN
+                (SELECT F.user2_id FROM "+
+            friendsTableName + " F
+                WHERE U2.user_id = F.user1_id
+            )
+            f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id");
 
 
 CREATE VIEW pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) 
