@@ -403,15 +403,6 @@ public class MyFakebookOracle extends FakebookOracle {
                 }
 
 
-
-
-
-/*
-                ResultSet rst = stmt.executeQuery("select U.user_id from " +
-                    userTableName + " U, " + currentCityTableName + " CC, " + hometownCityTableName + " HC " +
-                    " where U.user_id = CC.user_id AND U.user_id = HC.user_id AND CC.current_city_id != HC.hometown_city_id");
-*/
-
                 stmt.executeUpdate("drop view photo_num_subjects");
                 stmt.executeUpdate("drop view photos_with_most_subjects");
 
@@ -425,21 +416,10 @@ public class MyFakebookOracle extends FakebookOracle {
 //CREATE VIEW most_tagged_photos (num_subjects, photo_id) AS SELECT * FROM photo_num_subjects WHERE num_subjects = (SELECT max(num_subjects) FROM photo_num_subjects) ORDER BY photo_id asc;
 
 //SELECT num_photos from subject_count;
-//
-
-
 
         } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
-
-        // select photo_id, album_id, album_name, photo_caption, photo_link
-        // from photos p, albums a
-        // 
-
-
-
-
     }
 
     @Override
@@ -475,6 +455,37 @@ public class MyFakebookOracle extends FakebookOracle {
         mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
                 sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
         this.bestMatches.add(mp);
+
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+             ResultSet.CONCUR_READ_ONLY)) {
+
+             "create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
+
+
+
+
+            ResultSet rst = stmt.executeQuery("select u.user_id, u.first_name, u.last_name from photos_with_most_subjects ms, " +
+                userTableName + 
+                " u, " + 
+                tagTableName + 
+                " t where ms.photo_id = " + 
+                photo_id + 
+                " and ms.photo_id = t.tag_photo_id and t.tag_subject_id = u.user_id order by u.user_id asc");
+
+            while(rst_two.next()) {
+                long user_id = rst_two.getLong(1);
+                String first_name = rst_two.getNString(2);
+                String last_name = rst_two.getNString(3);
+                tp.addTaggedUser(new UserInfo(user_id, first_name, last_name));
+            }
+
+            rst_two.close();
+            stmt_two.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
+        
+
 
 
 /*
