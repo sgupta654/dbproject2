@@ -543,6 +543,9 @@ public class MyFakebookOracle extends FakebookOracle {
         this.eventCount = 12;
         this.popularStateNames.add("Michigan");
         this.popularStateNames.add("California");
+
+        "select c.state_name, count(*) as num_events from tajik.public_user_events, tajik.public_cities c where event_city_id = c.city_id group by num_events order by num_events desc;"
+
     }
 
     //@Override
@@ -556,6 +559,10 @@ public class MyFakebookOracle extends FakebookOracle {
     public void findAgeInfo(Long user_id) {
         this.oldestFriend = new UserInfo(1L, "Oliver", "Oldham");
         this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");
+
+    //Find by MAX USER_ID IF TIE
+    //NOT WORKING
+    //"select u2.user_id, u2.first_name, u2.last_name from tajik.public_users u1, tajik.public_user u2, tajik.public_friends where (u1.user_id = user1_id OR u1.user_id = user2_id) AND (u2.user_id = user1_id OR u2.user_id = user2_id) AND u2.year_of_birth = (SELECT max(year_of_birth) from tajik.public_users where user_id = u2.user_id) OR u2.year_of_birth = (SELECT min(year_of_birth) from tajik.public_users where user_id = u2.user_id);"
     }
 
     @Override
@@ -577,6 +584,14 @@ public class MyFakebookOracle extends FakebookOracle {
         String user2LastName = "User2LastName";
         SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
         this.siblings.add(s);
+
+        // ALWAYS ASSUME USER1_ID = U1 && USER2_ID = U2 in FRIENDS
+        // Without user1 & user2 first_name & last_name
+        //"select user1_id, user2_id from tajik.public_friends, tajik.public_users u1, tajik.public_users u2, tajik.public_user_hometown_city h1, tajik.public_user_hometown_city h2 where user1_id = u1.user_id and user2_id = u2.user_id and u1.last_name = u2.last_name and (abs(u1.year_of_birth - u2.year_of_birth) < 10) and u1.user_id != u2.user_id and u1.user_id = h1.user_id and u2.user_id = h2.user_id and h1.hometown_city_id = h2.hometown_city_id group by user1_id, user2_id order by user1_id asc, user2_id asc;"
+
+        // Getting invalid character in group by
+        //"select user1_id, user2_id, u1.first_name, u1._last_name, u2.first_name, u2.last_name from tajik.public_friends, tajik.public_users u1, tajik.public_users u2, tajik.public_user_hometown_city h1, tajik.public_user_hometown_city h2 where user1_id = u1.user_id and user2_id = u2.user_id and u1.last_name = u2.last_name and (abs(u1.year_of_birth - u2.year_of_birth) < 10) and u1.user_id != u2.user_id and u1.user_id = h1.user_id and u2.user_id = h2.user_id and h1.hometown_city_id = h2.hometown_city_id group by user1_id, user2_id, u1.first_name, u1._last_name, u2.first_name, u2.last_name order by user1_id asc, user2_id asc;"
     }
+
 
 }
