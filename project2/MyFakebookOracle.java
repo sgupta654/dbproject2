@@ -437,6 +437,7 @@ public class MyFakebookOracle extends FakebookOracle {
     // (iii) If there are still ties, choose the pair with the smaller user_id for the male
     //
     public void matchMaker(int n, int yearDiff) {
+        
         Long girlUserId = 123L;
         String girlFirstName = "girlFirstName";
         String girlLastName = "girlLastName";
@@ -456,31 +457,61 @@ public class MyFakebookOracle extends FakebookOracle {
                 sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
         this.bestMatches.add(mp);
 
+
+
+
+
         try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
              ResultSet.CONCUR_READ_ONLY)) {
 
-             "create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
+        //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
 
 
+            stmt.executeUpdate("create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) as select u1.user_id, u1.gender, u1.first_name, u1.last_name, u1.year_of_birth, u2.user_id, u2.gender, u2.first_name, u2.last_name, u2.year_of_birth, p.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from " +
+            userTableName +
+            " u1, " +
+            userTableName +
+            " u2, " +
+            photoTableName +
+            " p, " +
+            tagTableName +
+            " t1, " +
+            tagTableName +
+            " t2, " +
+            albumTableName +
+            " a, " +
+            "where (u1.user_id != u2.user_id and u1.gender != u2.gender and u1.gender = 'female' and abs(u1.year_of_birth - u2.year_of_birth) <= "+ yearDiff +" and u1.user_id = t1.tag_subject_id and t1.tag_photo_id = t2.tag_photo_id and t2.tag_subject_id = u2.user_id and u2.user_id not in (select f.user2_id from " +
+            friendsTableName +
+            " f where u1.user_id = f.user1_id) and u1.user_id not in (select f.user2_id from " +
+            friendsTableName +
+            " f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id");
 
 
-            ResultSet rst = stmt.executeQuery("select u.user_id, u.first_name, u.last_name from photos_with_most_subjects ms, " +
-                userTableName + 
-                " u, " + 
-                tagTableName + 
-                " t where ms.photo_id = " + 
-                photo_id + 
-                " and ms.photo_id = t.tag_photo_id and t.tag_subject_id = u.user_id order by u.user_id asc");
+            create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) as select u1.user_id, u1.gender, u1.first_name, u1.last_name, u1.year_of_birth, u2.user_id, u2.gender, u2.first_name, u2.last_name, u2.year_of_birth, p.photo_id, p.album_id, a.album_name, p.photo_caption, p.photo_link from 
+            tajik.public_users u1, 
+            tajik.public_users u2, 
+            tajik.public_photos p, 
+            tajik.public_tags t1, 
+            tajik.public_tags t2, 
+            tajik.public_albums a, 
+            where (u1.user_id != u2.user_id and u1.gender != u2.gender and u1.gender = 'female' 
+                and abs(u1.year_of_birth - u2.year_of_birth) <= 100 
+                and u1.user_id = t1.tag_subject_id and t1.tag_photo_id = t2.tag_photo_id and t2.tag_subject_id = u2.user_id 
+                and u2.user_id not in (select f.user2_id from
+            tajik.public_friends f where u1.user_id = f.user1_id) and u1.user_id not in (select f.user2_id from 
+            tajik.public_friends f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id;
 
-            while(rst_two.next()) {
-                long user_id = rst_two.getLong(1);
-                String first_name = rst_two.getNString(2);
-                String last_name = rst_two.getNString(3);
-                tp.addTaggedUser(new UserInfo(user_id, first_name, last_name));
-            }
+ 
 
-            rst_two.close();
-            stmt_two.close();
+
+            stmt.executeUpdate("create view numphotos (u1, u2, sum) as select d1.u1_id, d1.u2_id, count(d1.u1_id) as banana from pairs d1, pairs d2 where (d1.u1_id = d2.u1_id and d1.u2_id = d2.u2_id) or (d1.u1_id = d2.u1_id and d1.u2_id = d2.u2_id) group by d1.u1_id, d1.u2_id order by banana desc, d1.u1_id asc, d1.u2_id asc");
+
+            stmt.executeUpdate("drop view numphotos");
+            stmt.executeUpdate("drop view pairs");
+
+
+             //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
+
         } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
@@ -544,7 +575,7 @@ public class MyFakebookOracle extends FakebookOracle {
         this.popularStateNames.add("Michigan");
         this.popularStateNames.add("California");
 
-        "select c.state_name, count(*) as num_events from tajik.public_user_events, tajik.public_cities c where event_city_id = c.city_id group by num_events order by num_events desc;"
+        // "select c.state_name, count(*) as num_events from tajik.public_user_events, tajik.public_cities c where event_city_id = c.city_id group by num_events order by num_events desc;"
 
     }
 
@@ -557,12 +588,12 @@ public class MyFakebookOracle extends FakebookOracle {
     // on the same day, then assume that the one with the larger user_id is older
     //
     public void findAgeInfo(Long user_id) {
-        this.oldestFriend = new UserInfo(1L, "Oliver", "Oldham");
-        this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");
 
+        //select u2.user_id, u2.first_name, u2.last_name, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2, tajik.public_friends where user1_id = 8 and u1.user_id = user1_id AND u2.user_id = user2_id group by u2.user_id, u2.first_name, u2.last_name, u2.year_of_birth order by u2.year_of_birth desc;
+   
     //Find by MAX USER_ID IF TIE
     //NOT WORKING
-    //"select u2.user_id, u2.first_name, u2.last_name from tajik.public_users u1, tajik.public_user u2, tajik.public_friends where (u1.user_id = user1_id OR u1.user_id = user2_id) AND (u2.user_id = user1_id OR u2.user_id = user2_id) AND u2.year_of_birth = (SELECT max(year_of_birth) from tajik.public_users where user_id = u2.user_id) OR u2.year_of_birth = (SELECT min(year_of_birth) from tajik.public_users where user_id = u2.user_id);"
+    //"select u2.user_id, u2.first_name, u2.last_name from tajik.public_users u1, tajik.public_users u2, tajik.public_friends where user1_id = 8 and u1.user_id = user1_id AND u2.user_id = user2_id AND u2.year_of_birth = (SELECT max(year_of_birth) from tajik.public_users where user_id = u2.user_id) OR u2.year_of_birth = (SELECT min(year_of_birth) from tajik.public_users where user_id = u2.user_id);"
     }
 
     @Override
@@ -576,6 +607,7 @@ public class MyFakebookOracle extends FakebookOracle {
     //
     //
     public void findPotentialSiblings() {
+        /*
         Long user1_id = 123L;
         String user1FirstName = "User1FirstName";
         String user1LastName = "User1LastName";
@@ -584,14 +616,46 @@ public class MyFakebookOracle extends FakebookOracle {
         String user2LastName = "User2LastName";
         SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
         this.siblings.add(s);
+        */
 
-        // ALWAYS ASSUME USER1_ID = U1 && USER2_ID = U2 in FRIENDS
-        // Without user1 & user2 first_name & last_name
-        //"select user1_id, user2_id from tajik.public_friends, tajik.public_users u1, tajik.public_users u2, tajik.public_user_hometown_city h1, tajik.public_user_hometown_city h2 where user1_id = u1.user_id and user2_id = u2.user_id and u1.last_name = u2.last_name and (abs(u1.year_of_birth - u2.year_of_birth) < 10) and u1.user_id != u2.user_id and u1.user_id = h1.user_id and u2.user_id = h2.user_id and h1.hometown_city_id = h2.hometown_city_id group by user1_id, user2_id order by user1_id asc, user2_id asc;"
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+             ResultSet.CONCUR_READ_ONLY)) {
 
-        // Getting invalid character in group by
-        //"select user1_id, user2_id, u1.first_name, u1._last_name, u2.first_name, u2.last_name from tajik.public_friends, tajik.public_users u1, tajik.public_users u2, tajik.public_user_hometown_city h1, tajik.public_user_hometown_city h2 where user1_id = u1.user_id and user2_id = u2.user_id and u1.last_name = u2.last_name and (abs(u1.year_of_birth - u2.year_of_birth) < 10) and u1.user_id != u2.user_id and u1.user_id = h1.user_id and u2.user_id = h2.user_id and h1.hometown_city_id = h2.hometown_city_id group by user1_id, user2_id, u1.first_name, u1._last_name, u2.first_name, u2.last_name order by user1_id asc, user2_id asc;"
+            ResultSet rst = stmt.executeQuery("select user1_id, user2_id, u1.first_name, u1.last_name, u2.first_name, u2.last_name from " +
+                friendsTableName + 
+                " , " + 
+                userTableName + 
+                " u1, " +
+                userTableName + 
+                " u2, " +
+                hometownCityTableName +
+                " h1, " +
+                hometownCityTableName +
+                " h2 " +
+                "where user1_id = u1.user_id and user2_id = u2.user_id and u1.last_name = u2.last_name and (abs(u1.year_of_birth - u2.year_of_birth) < 10) and u1.user_id != u2.user_id and u1.user_id = h1.user_id and u2.user_id = h2.user_id and h1.hometown_city_id = h2.hometown_city_id group by user1_id, user2_id, u1.first_name, u1.last_name, u2.first_name, u2.last_name order by user1_id asc, user2_id asc");
+
+            while(rst.next()) {
+                Long user1_id = rst.getLong(1);
+                Long user2_id = rst.getLong(2);
+                String user1_first_name = rst.getNString(3);
+                String user1_last_name = rst.getNString(4);
+                String user2_first_name = rst.getNString(5);
+                String user2_last_name = rst.getNString(6);
+                SiblingInfo s = new SiblingInfo(user1_id, user1_first_name, user1_last_name, user2_id, user2_first_name, user2_last_name);
+                this.siblings.add(s);
+            }
+
+            rst.close();
+            stmt.close();
+
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
+
+
+
     }
+
 
 
 }
