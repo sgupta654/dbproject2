@@ -496,7 +496,9 @@ public class MyFakebookOracle extends FakebookOracle {
             friendsTableName + " F
                 WHERE U2.user_id = F.user1_id
             )
-            f where u2.user_id = f.user1_id) and p.photo_id = t1.tag_photo_id and p.album_id = a.album_id");
+            AND P.photo_id = T1.tag_photo_id
+            AND P.album_id = A.album_id
+            )");
 
 
 CREATE VIEW pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) 
