@@ -466,7 +466,6 @@ public class MyFakebookOracle extends FakebookOracle {
         try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
              ResultSet.CONCUR_READ_ONLY)) {
 
-
             stmt.executeUpdate("create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) AS SELECT U1.user_id, U1.gender, U1.first_name, U1.last_name, U1.year_of_birth, U2.user_id, U2.gender, U2.first_name, U2.last_name, U2.year_of_birth, P.photo_id, P.album_id, P.photo_caption, A.album_name, P.photo_link FROM " + 
                 userTableName + 
                 " U1, " + 
@@ -537,7 +536,6 @@ public class MyFakebookOracle extends FakebookOracle {
                 previousU2 = boyUserId;
             }
 
-
             stmt.executeUpdate("drop view numphotos");
             stmt.executeUpdate("drop view pairs");
 
@@ -581,6 +579,7 @@ public class MyFakebookOracle extends FakebookOracle {
     //
     @Override
     public void suggestFriendsByMutualFriends(int n) {
+        /*
         Long user1_id = 123L;
         String user1FirstName = "User1FirstName";
         String user1LastName = "User1LastName";
@@ -593,6 +592,74 @@ public class MyFakebookOracle extends FakebookOracle {
         p.addSharedFriend(678L, "sharedFriend2FirstName", "sharedFriend2LastName");
         p.addSharedFriend(789L, "sharedFriend3FirstName", "sharedFriend3LastName");
         this.suggestedUsersPairs.add(p);
+        */
+
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+             ResultSet.CONCUR_READ_ONLY)) {
+
+
+        
+            stmt.executeUpdate("CREATE VIEW Pls (U1_id, U1_first, U1_last, U2_id, U2_first, U2_last, SUM) AS " +
+                "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, COUNT(U3.user_id) AS Sum " +
+                "FROM " + userTableName + " U1, " + userTableName + " U2, " + userTableName + " U3 " +
+                "WHERE (U3.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U1.user_id) OR (U3.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U1.user_id))) " +
+                "AND (U3.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U2.user_id) OR (U3.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U2.user_id))) " +
+                "AND U1.user_id NOT IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U2.user_id) AND U2.user_id NOT IN (SELECT user1_id FROM " + friendsTableName + " WHERE user2_id = U1.user_id) " +
+                "AND U1.user_id < U2.user_id AND U2.user_id != U3.user_id AND U1.user_id != U3.user_id " +
+                "GROUP BY U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name " +
+                "ORDER BY Sum DESC, U1.user_id ASC, U2.user_id ASC");
+
+            int temp = 0;
+            while(temp < n) {
+
+                temp++;
+                ResultSet rst = stmt.executeQuery("select u1_id, u1_first, u1_last, u2_id, u2_first, u2_last");
+
+                Long user1_id = rst.getLong(1);
+                String user1_first = rst.getNString
+
+/*
+
+                    try (Statement stmt_two = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                         ResultSet.CONCUR_READ_ONLY)) {
+
+                        ResultSet rst_two = stmt_two.executeQuery("select u.user_id, u.first_name, u.last_name from photos_with_most_subjects ms, " +
+                            userTableName + 
+                            " u, " + 
+                            tagTableName + 
+                            " t where ms.photo_id = " + 
+                            photo_id + 
+                            " and ms.photo_id = t.tag_photo_id and t.tag_subject_id = u.user_id order by u.user_id asc");
+
+                        while(rst_two.next()) {
+                            long user_id = rst_two.getLong(1);
+                            String first_name = rst_two.getNString(2);
+                            String last_name = rst_two.getNString(3);
+                            tp.addTaggedUser(new UserInfo(user_id, first_name, last_name));
+                        }
+
+                        rst_two.close();
+                        stmt_two.close();
+                    } catch (SQLException err) {
+                        System.err.println(err.getMessage());
+                    }
+*/
+                rst.next();
+
+                System.out.print(u1_id + " " + u2_id);
+            }
+
+
+
+            stmt.executeUpdate("drop view pls");
+
+            //rst.close();
+            stmt.close();
+
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
+
 
 
 
@@ -627,6 +694,8 @@ public class MyFakebookOracle extends FakebookOracle {
                 this.popularStateNames.add(state_name);
             }
             stmt.executeUpdate("drop view States");
+
+            rst.close();
 
             
             stmt.close();
@@ -679,7 +748,6 @@ public class MyFakebookOracle extends FakebookOracle {
             rst.close();
 
             stmt.executeUpdate("drop view AgeF");
-
             
             stmt.close();
 
