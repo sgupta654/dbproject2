@@ -609,44 +609,57 @@ public class MyFakebookOracle extends FakebookOracle {
                 "GROUP BY U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name " +
                 "ORDER BY Sum DESC, U1.user_id ASC, U2.user_id ASC");
 
+            ResultSet rst = stmt.executeQuery("select u1_id, u1_first, u1_last, u2_id, u2_first, u2_last from pls");
+
             int temp = 0;
-            while(temp < n) {
+            while(temp < n && rst.next()) {
 
                 temp++;
-                ResultSet rst = stmt.executeQuery("select u1_id, u1_first, u1_last, u2_id, u2_first, u2_last");
+                
 
-                Long user1_id = rst.getLong(1);
-                String user1_first = rst.getNString
+                Long u1_id = rst.getLong(1);
+                String u1_first = rst.getNString(2);
+                String u1_last = rst.getNString(3);
+                Long u2_id = rst.getLong(4);
+                String u2_first = rst.getNString(5);
+                String u2_last = rst.getNString(6);
 
-/*
+                UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
 
-                    try (Statement stmt_two = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
-                         ResultSet.CONCUR_READ_ONLY)) {
 
-                        ResultSet rst_two = stmt_two.executeQuery("select u.user_id, u.first_name, u.last_name from photos_with_most_subjects ms, " +
-                            userTableName + 
-                            " u, " + 
-                            tagTableName + 
-                            " t where ms.photo_id = " + 
-                            photo_id + 
-                            " and ms.photo_id = t.tag_photo_id and t.tag_subject_id = u.user_id order by u.user_id asc");
+                try (Statement stmt_two = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                     ResultSet.CONCUR_READ_ONLY)) {
 
-                        while(rst_two.next()) {
-                            long user_id = rst_two.getLong(1);
-                            String first_name = rst_two.getNString(2);
-                            String last_name = rst_two.getNString(3);
-                            tp.addTaggedUser(new UserInfo(user_id, first_name, last_name));
-                        }
 
-                        rst_two.close();
-                        stmt_two.close();
-                    } catch (SQLException err) {
-                        System.err.println(err.getMessage());
+
+                    ResultSet rst_two = stmt_two.executeQuery("SELECT DISTINCT UM.user_id, UM.first_name, UM.last_name " +
+                        "FROM " + userTableName + " UM, " + "Pls P, " + friendsTableName + " F1, " + friendsTableName + " F2 " +
+                        "WHERE ((UM.user_id = F1.user1_id AND F1.user2_id = P.U1_id) OR (UM.user_id = F1.user2_id AND F1.user1_id = P.U1_id)) " +
+                        "AND ((UM.user_id = F2.user1_id AND F2.user2_id = P.U2_id) OR (UM.user_id = F2.user2_id AND F2.user1_id = P.U2_id)) " +
+                        "ORDER BY UM.user_id ASC");
+
+                    while(rst_two.next()) {
+                        Long f_id = rst_two.getLong(1);
+                        String f_first = rst_two.getNString(2);
+                        String f_last = rst_two.getNString(3);
+
+                        p.addSharedFriend(f_id, f_first, f_last);
+                        this.suggestedUsersPairs.add(p);
+
+
+
                     }
-*/
-                rst.next();
 
-                System.out.print(u1_id + " " + u2_id);
+
+
+
+
+                    rst_two.close();
+                    stmt_two.close();
+                } catch (SQLException err) {
+                    System.err.println(err.getMessage());
+                }
+
             }
 
 
