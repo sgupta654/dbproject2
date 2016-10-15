@@ -437,7 +437,7 @@ public class MyFakebookOracle extends FakebookOracle {
     // (iii) If there are still ties, choose the pair with the smaller user_id for the male
     //
     public void matchMaker(int n, int yearDiff) {
-        
+/*
         Long girlUserId = 123L;
         String girlFirstName = "girlFirstName";
         String girlLastName = "girlLastName";
@@ -457,6 +457,8 @@ public class MyFakebookOracle extends FakebookOracle {
                 sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
         this.bestMatches.add(mp);
 
+*/
+
 
 
 
@@ -464,17 +466,85 @@ public class MyFakebookOracle extends FakebookOracle {
         try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
              ResultSet.CONCUR_READ_ONLY)) {
 
-        //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
 
- 
+            stmt.executeUpdate("create view pairs (u1_id, u1_g, u1_f, u1_l, u1_y, u2_id, u2_g, u2_f, u2_l, u2_y, p_id, p_aid, p_c, a_n, p_l) AS SELECT U1.user_id, U1.gender, U1.first_name, U1.last_name, U1.year_of_birth, U2.user_id, U2.gender, U2.first_name, U2.last_name, U2.year_of_birth, P.photo_id, P.album_id, P.photo_caption, A.album_name, P.photo_link FROM " + 
+                userTableName + 
+                " U1, " + 
+                userTableName + 
+                " U2, " + 
+                photoTableName + 
+                " P, " + 
+                tagTableName + 
+                " T1, " + 
+                tagTableName + 
+                " T2, " + 
+                albumTableName + 
+                " A WHERE U1.user_id != U2.user_id AND U1.gender != U2.gender AND U1.gender = 'female' AND ABS(U1.year_of_birth - U2.year_of_birth) <= " + 
+                yearDiff +
+                " AND U1.user_id = T1.tag_subject_id AND T1.tag_photo_id = T2.tag_photo_id AND T2.tag_subject_id = U2.user_id AND U2.user_id NOT IN (SELECT F.user2_id FROM " +
+                friendsTableName + " F WHERE U1.user_id = F.user1_id) AND U1.user_id NOT IN (SELECT F.user2_id FROM " + 
+                friendsTableName + " F WHERE U2.user_id = F.user1_id) AND P.photo_id = T1.tag_photo_id AND P.album_id = A.album_id");
+
+            stmt.executeUpdate("create view numphotos (u1, u2, sum) as select d1.u1_id, d1.u2_id, count(d1.u1_id) as banana from pairs d1, pairs d2 where (d1.u1_id = d2.u1_id and d1.u2_id = d2.u2_id) group by d1.u1_id, d1.u2_id order by banana desc, d1.u1_id asc, d1.u2_id asc");
+
+            ResultSet rst = stmt.executeQuery("SELECT D.u1_id, D.u1_g, D.u1_f, D.u1_l, D.u1_y, D.u2_id, D.u2_g, D.u2_f, D.u2_l, D.u2_y, D.p_id, D.p_aid, D.p_c, D.a_n, D.p_l, L.U1, L.U2, L.SUM FROM pairs D, numphotos L WHERE D.u1_id = L.U1 AND D.u2_id = L.U2 GROUP BY D.u1_id, D.u1_g, D.u1_f, D.u1_l, D.u1_y, D.u2_id, D.u2_g, D.u2_f, D.u2_l, D.u2_y, D.p_id, D.p_aid, D.p_c, D.a_n, D.p_l, L.U1, L.U2, L.SUM ORDER BY L.SUM DESC, L.U1 ASC, L.U2 ASC");
+            //stmt.executeUpdate("drop view numphotos");
+            //stmt.executeUpdate("drop view pairs");
+            Long previousU1 = 0L;
+            Long previousU2 = 0L;
+            int row = 0;
+
+            MatchPair mp = null;
+
+            while(rst.next()) {
+                Long girlUserId = rst.getLong(1);
+                String u1_gender = rst.getNString(2);
+                String girlFirstName = rst.getNString(3);
+                String girlLastName = rst.getNString(4);
+                int girlYear = rst.getInt(5);
+                Long boyUserId = rst.getLong(6);
+                String u2_gender = rst.getNString(7);
+                String boyFirstName = rst.getNString(8);
+                String boyLastName = rst.getNString(9);
+                int boyYear = rst.getInt(10);
+
+                String sharedPhotoId = rst.getNString(11);
+                String sharedPhotoAlbumId = rst.getNString(12);
+                String sharedPhotoAlbumName = rst.getNString(14);
+                String sharedPhotoCaption = rst.getNString(13);
+                String sharedPhotoLink = rst.getNString(15);
 
 
-            stmt.executeUpdate("create view numphotos (u1, u2, sum) as select d1.u1_id, d1.u2_id, count(d1.u1_id) as banana from pairs d1, pairs d2 where (d1.u1_id = d2.u1_id and d1.u2_id = d2.u2_id) or (d1.u1_id = d2.u1_id and d1.u2_id = d2.u2_id) group by d1.u1_id, d1.u2_id order by banana desc, d1.u1_id asc, d1.u2_id asc");
+
+
+                System.out.print("R\n" + " " + girlUserId + " " + u1_gender + " " + girlFirstName + " " + girlLastName + " " + girlYear + " " + boyUserId + " " + u2_gender + " " + boyFirstName + " " + boyLastName + " " + boyYear);
+
+                if(girlUserId == previousU1 && boyUserId == previousU2) {
+                    mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
+                            sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
+                    this.bestMatches.add(mp);
+                }
+                else if (row == 1 || (girlUserId != previousU1 && boyUserId != previousU2)) {
+                    mp = new MatchPair(girlUserId, girlFirstName, girlLastName,
+                        girlYear, boyUserId, boyFirstName, boyLastName, boyYear);
+                    mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
+                            sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
+                    this.bestMatches.add(mp);
+                }
+
+                row++;
+                previousU1 = girlUserId;
+                previousU2 = boyUserId;
+            }
+
 
             stmt.executeUpdate("drop view numphotos");
             stmt.executeUpdate("drop view pairs");
 
 
+
+            rst.close();
+            stmt.close();
              //"create view match_pairs (uid1, uid2, fn1, ln1, g1, yob1, fn2, ln2, g2, yob2) as select distinct u1.user_id, u2.user_id, u1.first_name, u1.last_name, u1.gender, u1.year_of_birth, u2.first_name, u2.last_name, u2.gender, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2 where u1.user_id < u2.user_id and u1.gender != u2.gender and (abs(u1.year_of_birth - u2.year_of_birth) <= 3) and u2.user_id not in (select f.user2_id from tajik.public_friends f where f.user1_id = u1.user_id) and u2.user_id in (select t2.tag_subject_id from tajik.public_tags t1, tajik.public_tags t2 where t1.tag_photo_id = t2.tag_photo_id and t1.tag_subject_id = u1.user_id and t2.tag_subject_id != u1.user_id and t2.tag_subject_id = u2.user_id)";
 
         } catch (SQLException err) {
@@ -536,11 +606,36 @@ public class MyFakebookOracle extends FakebookOracle {
     // events in that state.  If there is a tie, return the names of all of the (tied) states.
     //
     public void findEventStates() {
-        this.eventCount = 12;
-        this.popularStateNames.add("Michigan");
-        this.popularStateNames.add("California");
 
         // "select c.state_name, count(*) as num_events from tajik.public_user_events, tajik.public_cities c where event_city_id = c.city_id group by num_events order by num_events desc;"
+
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+             ResultSet.CONCUR_READ_ONLY)) {
+
+            stmt.executeUpdate("CREATE VIEW States (state, count) AS SELECT STATE_NAME, Count(State_name) AS Num_Events FROM " +
+            eventTableName + ", " +
+            cityTableName +
+            " WHERE CITY_ID = EVENT_CITY_ID GROUP BY STATE_NAME ORDER BY Num_Events DESC");
+
+            ResultSet rst = stmt.executeQuery("select state, count from states where count = (SELECT MAX(count) FROM States)");
+
+            while(rst.next()) {
+                int event_count = rst.getInt(2);
+                String state_name = rst.getNString(1);
+
+                this.eventCount = event_count;
+                this.popularStateNames.add(state_name);
+            }
+            stmt.executeUpdate("drop view States");
+
+            
+            stmt.close();
+
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
+
+
 
     }
 
@@ -553,6 +648,44 @@ public class MyFakebookOracle extends FakebookOracle {
     // on the same day, then assume that the one with the larger user_id is older
     //
     public void findAgeInfo(Long user_id) {
+
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+             ResultSet.CONCUR_READ_ONLY)) {
+
+
+            stmt.executeUpdate("CREATE VIEW AgeF (id, first_name, last_name, year, month, day) AS SELECT U2.user_id, U2.first_name, U2.last_name, U2.year_of_birth, U2.month_of_birth, U2.day_of_birth FROM " +
+                friendsTableName + ", " + userTableName + " U, " + userTableName + " U2 " +
+                "WHERE U.user_id = " + user_id + " AND ((user1_id = U.user_id AND user2_id = U2.user_id) OR (user2_id = U.user_id AND user1_id = U2.user_id)) AND U.user_id != U2.user_id GROUP BY U2.user_id, U2.first_name, U2.last_name, U2.year_of_birth, U2.month_of_birth, U2.day_of_birth ORDER BY U2.year_of_birth DESC, U2.month_of_birth DESC, U2.day_of_birth DESC, U2.user_id DESC");
+
+            ResultSet rst = stmt.executeQuery("SELECT A.id, A.first_name, A.last_name FROM AgeF A, AgeF Ad, AgeF Am, AgeF Ay WHERE A.id = Ad.id AND A.id = Am.id AND a.id = Ay.id AND Ay.year = (SELECT MAX(year) FROM AgeF) AND Am.month = (SELECT MAX(month) FROM AgeF WHERE year = Ay.year) AND Ad.day = (SELECT MAX(day) FROM AgeF WHERE year = Ay.year AND Am.month = month)");
+
+            while(rst.next()) {
+                Long young_user_id = rst.getLong(1);
+                String young_first_name = rst.getNString(2);
+                String young_last_name = rst.getNString(3);
+
+                this.youngestFriend = new UserInfo(young_user_id, young_first_name, young_last_name);
+            }
+            rst.close();
+
+            rst = stmt.executeQuery("SELECT A.id, A.first_name, A.last_name FROM AgeF A, AgeF Ad, AgeF Am, AgeF Ay WHERE A.id = Ad.id AND A.id = Am.id AND a.id = Ay.id AND Ay.year = (SELECT MIN(year) FROM AgeF) AND Am.month = (SELECT MIN(month) FROM AgeF WHERE year = Ay.year) AND Ad.day = (SELECT MIN(day) FROM AgeF WHERE year = Ay.year AND Am.month = month)");
+            while(rst.next()) {
+                Long old_user_id = rst.getLong(1);
+                String old_first_name = rst.getNString(2);
+                String old_last_name = rst.getNString(3);
+
+                this.oldestFriend = new UserInfo(old_user_id, old_first_name, old_last_name);
+            }
+            rst.close();
+
+            stmt.executeUpdate("drop view AgeF");
+
+            
+            stmt.close();
+
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
 
         //select u2.user_id, u2.first_name, u2.last_name, u2.year_of_birth from tajik.public_users u1, tajik.public_users u2, tajik.public_friends where user1_id = 8 and u1.user_id = user1_id AND u2.user_id = user2_id group by u2.user_id, u2.first_name, u2.last_name, u2.year_of_birth order by u2.year_of_birth desc;
    
