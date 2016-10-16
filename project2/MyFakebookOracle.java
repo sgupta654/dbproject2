@@ -494,8 +494,9 @@ public class MyFakebookOracle extends FakebookOracle {
             int row = 0;
 
             MatchPair mp = null;
+            int count = 0;
 
-            while(rst.next()) {
+            while(rst.next() && count < n) {
                 Long girlUserId = rst.getLong(1);
                 String u1_gender = rst.getNString(2);
                 String girlFirstName = rst.getNString(3);
@@ -523,12 +524,13 @@ public class MyFakebookOracle extends FakebookOracle {
                             sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
                     this.bestMatches.add(mp);
                 }
-                else if (row == 1 || (girlUserId != previousU1 && boyUserId != previousU2)) {
+                else if ((girlUserId != previousU1 && boyUserId != previousU2) || row == 1) {
                     mp = new MatchPair(girlUserId, girlFirstName, girlLastName,
                         girlYear, boyUserId, boyFirstName, boyLastName, boyYear);
                     mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
                             sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
                     this.bestMatches.add(mp);
+                    ++count;
                 }
 
                 row++;
@@ -599,33 +601,77 @@ public class MyFakebookOracle extends FakebookOracle {
 
 
         
-            stmt.executeUpdate("CREATE VIEW Pls (U1_id, U1_first, U1_last, U2_id, U2_first, U2_last, SUM) AS " +
-                "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, COUNT(U3.user_id) AS Sum " +
-                "FROM " + userTableName + " U1, " + userTableName + " U2, " + userTableName + " U3 " +
-                "WHERE (U3.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U1.user_id) OR (U3.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U1.user_id))) " +
-                "AND (U3.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U2.user_id) OR (U3.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U2.user_id))) " +
+            /*stmt.executeUpdate("CREATE VIEW Pls (U1_id, U1_first, U1_last, U2_id, U2_first, U2_last, SUM) AS " +
+                "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, COUNT(UM.user_id) AS Sum " +
+                "FROM " + userTableName + " U1, " + userTableName + " U2, " + userTableName + " UM " +
+                "WHERE (UM.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U1.user_id) OR (UM.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U1.user_id))) " +
+                "AND (UM.user_id IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U2.user_id) OR (UM.user_id IN (SELECT user2_id FROM tajik.public_friends WHERE user1_id = U2.user_id))) " +
                 "AND U1.user_id NOT IN (SELECT user1_id FROM tajik.public_friends WHERE user2_id = U2.user_id) AND U2.user_id NOT IN (SELECT user1_id FROM " + friendsTableName + " WHERE user2_id = U1.user_id) " +
-                "AND U1.user_id < U2.user_id AND U2.user_id != U3.user_id AND U1.user_id != U3.user_id " +
+                "AND U2.user_id != UM.user_id AND U1.user_id != UM.user_id " +
                 "GROUP BY U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name " +
-                "ORDER BY Sum DESC, U1.user_id ASC, U2.user_id ASC");
+                "ORDER BY Sum DESC, U1.user_id ASC, U2.user_id ASC");*/
 
-            ResultSet rst = stmt.executeQuery("select u1_id, u1_first, u1_last, u2_id, u2_first, u2_last from pls");
+            stmt.executeUpdate("CREATE VIEW Mut (user1_id, user1_first, user1_last, user2_id, user2_first, user2_last, mutual_id, mutual_first, mutual_last) AS " +
+                "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, U.user_id,  U.first_name, U.last_name " +
+                "FROM " + userTableName "U1, " + userTableName + "U2, " + userTableName "U " +
+                "WHERE U.user_id != U1.user_id AND U.user_id != U2.user_id AND U1.user_id < U2.user_id " +
+                "AND NOT EXISTS (SELECT * FROM " + friendsTableName + "F WHERE F.user1_id = U1.user_id AND F.user2_id = U2.user_id) " +
+                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName +  "F WHERE F.user2_id = U1.user_id) " +
+                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + "F WHERE F.user1_id = U1.user_id)) " +
+                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName + "F WHERE F.user2_id = U2.user_id)" +
+                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + "F WHERE F.user1_id = U2.user_id))");
 
-            int temp = 0;
-            while(temp < n && rst.next()) {
+            stmt.executeUpdate("CREATE VIEW MS (user1_id, user2_id, sum) AS " +
+                "SELECT user1_id, user2_id, count(mutual_id) AS sum " +
+                "FROM Mut " +
+                "GROUP BY user1_id, user2_id ORDER BY sum DESC, user1_id ASC, user2_id ASC");
+            
+            ResultSet rst = stmt.executeQuery("SELECT M.user1_id, M.user1_first, M.user1_last, M.user2_id, M.user2_first, M.user2_last, M.mutual_id, M.mutual_first, M.mutual_last " +
+                "FROM Mut M, MS S " +
+                "WHERE M.user1_id = S.user1_id AND M.user2_id = S.user2_id ORDER BY S.sum DESC, M.user1_id ASC, M.user2_id ASC, M.mutual_id ASC");
+            
+            int count = 0;
+            Boolean next = rst.next();
+            Long prev_u1_id = 0L;
+            Long prev_u2_id = 0L;
 
-                temp++;
+            Long u1_id = rst.getLong(1);
+            String u1_first = rst.getNString(2);
+            String u1_last = rst.getNString(3);
+            Long u2_id = rst.getLong(4);
+            String u2_first = rst.getNString(5);
+            String u2_last = rst.getNString(6);
+
+            while(next && count <= n) {
                 
+                // If rst.next() has moved onto a new user pair, get their information
+                if (prev_u1_id != rst.getLong(1) || prev_u2_id != rst.getLong(2)) {
+                    u1_id = rst.getLong(1);
+                    u1_first = rst.getNString(2);
+                    u1_last = rst.getNString(3);
+                    u2_id = rst.getLong(4);
+                    u2_first = rst.getNString(5);
+                    u2_last = rst.getNString(6);
 
-                Long u1_id = rst.getLong(1);
-                String u1_first = rst.getNString(2);
-                String u1_last = rst.getNString(3);
-                Long u2_id = rst.getLong(4);
-                String u2_first = rst.getNString(5);
-                String u2_last = rst.getNString(6);
+                    UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
 
-                UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
+                    prev_u1_id = u1_id;
+                    prev_u2_id = u2_id;
+                    ++count;
+                }
 
+                Long m_id = rst.getLong(7);
+                String m_first = rst.getNString(8);
+                String m_last = rst.getNString(9);
+
+                p.addSharedFriend(m_id, m_first, m_last);
+                this.suggestedUsersPairs.add(p);
+
+                next = rst.next();
+
+
+
+/*
 
                 try (Statement stmt_two = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
                      ResultSet.CONCUR_READ_ONLY)) {
@@ -660,11 +706,12 @@ public class MyFakebookOracle extends FakebookOracle {
                     System.err.println(err.getMessage());
                 }
 
-            }
+            }*/
 
 
 
-            stmt.executeUpdate("drop view pls");
+            stmt.executeUpdate("drop view Mut");
+            stmt.executeUpdate("drop view MS");
 
             //rst.close();
             stmt.close();
