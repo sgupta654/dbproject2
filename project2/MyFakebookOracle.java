@@ -669,7 +669,7 @@ public class MyFakebookOracle extends FakebookOracle {
 
                 next = rst.next();
 
-
+            }
 
 /*
 
@@ -713,7 +713,7 @@ public class MyFakebookOracle extends FakebookOracle {
             stmt.executeUpdate("drop view Mut");
             stmt.executeUpdate("drop view MS");
 
-            //rst.close();
+            rst.close();
             stmt.close();
 
         } catch (SQLException err) {
