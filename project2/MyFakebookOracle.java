@@ -653,13 +653,12 @@ public class MyFakebookOracle extends FakebookOracle {
                     u2_first = rst.getNString(5);
                     u2_last = rst.getNString(6);
 
-                    UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
-
                     prev_u1_id = u1_id;
                     prev_u2_id = u2_id;
                     ++count;
                 }
 
+                UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
                 Long m_id = rst.getLong(7);
                 String m_first = rst.getNString(8);
                 String m_last = rst.getNString(9);
