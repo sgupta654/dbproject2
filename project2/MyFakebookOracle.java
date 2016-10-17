@@ -613,7 +613,7 @@ public class MyFakebookOracle extends FakebookOracle {
 
             stmt.executeUpdate("CREATE VIEW Mut (user1_id, user1_first, user1_last, user2_id, user2_first, user2_last, mutual_id, mutual_first, mutual_last) AS " +
                 "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, U.user_id,  U.first_name, U.last_name " +
-                "FROM " + userTableName "U1, " + userTableName + "U2, " + userTableName "U " +
+                "FROM " + userTableName + "U1, " + userTableName + "U2, " + userTableName + "U " +
                 "WHERE U.user_id != U1.user_id AND U.user_id != U2.user_id AND U1.user_id < U2.user_id " +
                 "AND NOT EXISTS (SELECT * FROM " + friendsTableName + "F WHERE F.user1_id = U1.user_id AND F.user2_id = U2.user_id) " +
                 "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName +  "F WHERE F.user2_id = U1.user_id) " +
