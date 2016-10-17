@@ -293,7 +293,7 @@ public class MyFakebookOracle extends FakebookOracle {
     // (I.e., current_city != hometown_city)
     //
     public void liveAwayFromHome() throws SQLException {
-        this.liveAwayFromHome.add(new UserInfo(11L, "Heather", "Movalot"));
+        //this.liveAwayFromHome.add(new UserInfo(11L, "Heather", "Movalot"));
 
         try (Statement stmt =
                  oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
@@ -611,63 +611,61 @@ public class MyFakebookOracle extends FakebookOracle {
                 "GROUP BY U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name " +
                 "ORDER BY Sum DESC, U1.user_id ASC, U2.user_id ASC");*/
 
-            stmt.executeUpdate("CREATE VIEW Mut (user1_id, user1_first, user1_last, user2_id, user2_first, user2_last, mutual_id, mutual_first, mutual_last) AS " +
+            stmt.executeUpdate("CREATE VIEW Apple (user1_id, user1_first, user1_last, user2_id, user2_first, user2_last, mutual_id, mutual_first, mutual_last) AS " +
                 "SELECT U1.user_id, U1.first_name, U1.last_name, U2.user_id, U2.first_name, U2.last_name, U.user_id,  U.first_name, U.last_name " +
-                "FROM " + userTableName + "U1, " + userTableName + "U2, " + userTableName + "U " +
+                "FROM " + userTableName + " U1, " + userTableName + " U2, " + userTableName + " U " +
                 "WHERE U.user_id != U1.user_id AND U.user_id != U2.user_id AND U1.user_id < U2.user_id " +
-                "AND NOT EXISTS (SELECT * FROM " + friendsTableName + "F WHERE F.user1_id = U1.user_id AND F.user2_id = U2.user_id) " +
-                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName +  "F WHERE F.user2_id = U1.user_id) " +
-                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + "F WHERE F.user1_id = U1.user_id)) " +
-                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName + "F WHERE F.user2_id = U2.user_id)" +
-                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + "F WHERE F.user1_id = U2.user_id))");
+                "AND NOT EXISTS (SELECT * FROM " + friendsTableName + " F WHERE F.user1_id = U1.user_id AND F.user2_id = U2.user_id) " +
+                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName +  " F WHERE F.user2_id = U1.user_id) " +
+                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + " F WHERE F.user1_id = U1.user_id)) " +
+                "AND (U.user_id IN (SELECT F.user1_id FROM " + friendsTableName + " F WHERE F.user2_id = U2.user_id)" +
+                    "OR U.user_id IN (SELECT F.user2_id FROM " + friendsTableName + " F WHERE F.user1_id = U2.user_id))");
 
-            stmt.executeUpdate("CREATE VIEW MS (user1_id, user2_id, sum) AS " +
-                "SELECT user1_id, user2_id, count(mutual_id) AS sum " +
-                "FROM Mut " +
-                "GROUP BY user1_id, user2_id ORDER BY sum DESC, user1_id ASC, user2_id ASC");
+            stmt.executeUpdate("CREATE VIEW Banana (user1_id, user2_id, sum) AS " +
+                "SELECT M.user1_id, M.user2_id, count(M.mutual_id) AS sum " +
+                "FROM Apple M " +
+                "GROUP BY M.user1_id, M.user2_id ORDER BY sum DESC, M.user1_id ASC, M.user2_id ASC");
+
+            stmt.executeUpdate("CREATE VIEW ORANGE (user1_id, user2_id, sum) AS " +
+                "SELECT B.user1_id, B.user2_id, B.sum " +
+                " FROM Banana B WHERE ROWNUM <= " + (n + 1) +
+                " ORDER BY B.sum DESC, B.user1_id ASC, B.user2_id ASC");
             
             ResultSet rst = stmt.executeQuery("SELECT M.user1_id, M.user1_first, M.user1_last, M.user2_id, M.user2_first, M.user2_last, M.mutual_id, M.mutual_first, M.mutual_last " +
-                "FROM Mut M, MS S " +
-                "WHERE M.user1_id = S.user1_id AND M.user2_id = S.user2_id ORDER BY S.sum DESC, M.user1_id ASC, M.user2_id ASC, M.mutual_id ASC");
+                "FROM Apple M, Orange S " +
+                "WHERE M.user1_id = S.user1_id AND M.user2_id = S.user2_id " +
+				"ORDER BY S.sum DESC, M.user1_id ASC, M.user2_id ASC, M.mutual_id ASC");
             
-            int count = 0;
+
+            //int count = 0;
             Boolean next = rst.next();
             Long prev_u1_id = 0L;
             Long prev_u2_id = 0L;
 
-            Long u1_id = rst.getLong(1);
-            String u1_first = rst.getNString(2);
-            String u1_last = rst.getNString(3);
-            Long u2_id = rst.getLong(4);
-            String u2_first = rst.getNString(5);
-            String u2_last = rst.getNString(6);
+            
+			int count = 0;
 
-            while(next && count <= n) {
-                
-                // If rst.next() has moved onto a new user pair, get their information
-                if (prev_u1_id != rst.getLong(1) || prev_u2_id != rst.getLong(2)) {
-                    u1_id = rst.getLong(1);
-                    u1_first = rst.getNString(2);
-                    u1_last = rst.getNString(3);
-                    u2_id = rst.getLong(4);
-                    u2_first = rst.getNString(5);
-                    u2_last = rst.getNString(6);
-
-                    prev_u1_id = u1_id;
-                    prev_u2_id = u2_id;
-                    ++count;
-                }
+            while(next && count < n) {
+				Long u1_id = rst.getLong(1);
+            	String u1_first = rst.getNString(2);
+            	String u1_last = rst.getNString(3);
+            	Long u2_id = rst.getLong(4);
+            	String u2_first = rst.getNString(5);
+            	String u2_last = rst.getNString(6);
+				prev_u1_id = u1_id;
+                prev_u2_id = u2_id;
 
                 UsersPair p = new UsersPair(u1_id, u1_first, u1_last, u2_id, u2_first, u2_last);
-                Long m_id = rst.getLong(7);
-                String m_first = rst.getNString(8);
-                String m_last = rst.getNString(9);
-
-                p.addSharedFriend(m_id, m_first, m_last);
+				while (prev_u1_id == rst.getLong(1) && prev_u2_id == rst.getLong(4) && next) {
+					Long m_id = rst.getLong(7);
+                	String m_first = rst.getNString(8);
+                	String m_last = rst.getNString(9);
+					p.addSharedFriend(m_id, m_first, m_last);
+                    next = rst.next();
+				}
+                
                 this.suggestedUsersPairs.add(p);
-
-                next = rst.next();
-
+				++count;
             }
 
 /*
@@ -709,8 +707,9 @@ public class MyFakebookOracle extends FakebookOracle {
 
 
 
-            stmt.executeUpdate("drop view Mut");
-            stmt.executeUpdate("drop view MS");
+            stmt.executeUpdate("drop view Apple");
+            stmt.executeUpdate("drop view Banana");
+            stmt.executeUpdate("drop view Orange");
 
             rst.close();
             stmt.close();
